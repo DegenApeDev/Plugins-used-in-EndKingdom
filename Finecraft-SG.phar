@@ -1,0 +1,319 @@
+<?php echo "PocketMine-MP plugin Finecraft_SG v0.5\nThis file has been generated using DevTools v1.10.0 at Sat, 30 May 2015 17:33:58 +0200\n----------------\n";if(extension_loaded("phar")){$phar = new \Phar(__FILE__);foreach($phar->getMetadata() as $key => $value){echo ucfirst($key).": ".(is_array($value) ? implode(", ", $value):$value)."\n";}} __HALT_COMPILER(); ?>
+˜a:9:{s:4:"name";s:12:"Finecraft_SG";s:7:"version";s:3:"0.5";s:4:"main";s:20:"Asidert\Finecraft_SG";s:3:"api";a:1:{i:0;s:5:"1.0.0";}s:6:"depend";a:0:{}s:11:"description";N;s:7:"authors";a:1:{i:0;s:7:"Asidert";}s:7:"website";N;s:12:"creationDate";i:1433000038;}	README.mdãfØiUã‡µ*¶src/Asidert/Finecraft_SG.phpzfØiUzy9!¶
+plugin.yml/fØiU/t'“¶=======================================================
+THIS PLUGIN MADE BY ASIDERT (ZYRANOV BORIS) FROM RUSSIA
+DO NOT COPY CODE!
+MY VK: http://www.vk.com/ZyranovBoris
+=======================================================<?php
+namespace Asidert;
+
+use pocketmine\plugin\PluginBase;
+use pocketmine\event\Listener;
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\level\Position;
+use pocketmine\level\Level;
+use pocketmine\item\Item;
+use pocketmine\Player;
+use pocketmine\Server;
+use pocketmine\OfflinePlayer;
+use pocketmine\utils\Config;
+use pocketmine\command\ConsoleCommandSender;
+use pocketmine\math\Vector3;
+use pocketmine\scheduler\PluginTask;
+use pocketmine\scheduler\CallbackTask;
+use pocketmine\block\Block;
+use pocketmine\event\entity\EntityDeathEvent;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\event\player\PlayerInteractEvent;
+use pocketmine\tile\Sign;
+use pocketmine\tile\Tile;
+use pocketmine\utils\TextFormat;
+use pocketmine\event\player\PlayerDeathEvent;
+use pocketmine\event\player\PlayerQuitEvent;
+use onebone\economyapi\EconomyAPI;
+use pocketmine\event\block\BlockBreakEvent;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\block\BlockPlaceEvent;
+use pocketmine\event\player\PlayerCommandPreprocessEvent;
+use Asidert\FineChests as FineChests;
+use pocketmine\event\player\PlayerRespawnEvent;
+use pocketmine\event\player\PlayerMoveEvent;
+
+class Finecraft_SG extends PluginBase implements Listener
+{
+	private static $obj = null;
+	public static function getInstance()
+	{
+		return self::$obj;
+	}
+	public function onEnable()
+	{
+		if(!self::$obj instanceof Main)
+		{
+			self::$obj = $this;
+		}
+		$this->getServer()->getPluginManager()->registerEvents($this,$this);
+		$this->getServer()->getScheduler()->scheduleRepeatingTask(new CallbackTask([$this,"gameTimber"]),20);
+		@mkdir($this->getDataFolder(), 0777, true);
+		$this->config=new Config($this->getDataFolder() . "config.yml", Config::YAML, array());
+		if($this->config->exists("lastpos"))
+		{
+			$this->sign=$this->config->get("sign");
+			$this->pos1=$this->config->get("pos1");
+			$this->pos2=$this->config->get("pos2");
+			$this->pos3=$this->config->get("pos3");
+			$this->pos4=$this->config->get("pos4");
+			$this->pos5=$this->config->get("pos5");
+			$this->pos6=$this->config->get("pos6");
+			$this->pos7=$this->config->get("pos7");
+			$this->pos8=$this->config->get("pos8");
+			$this->lastpos=$this->config->get("lastpos");
+			$this->level=$this->getServer()->getLevelByName($this->config->get("pos1")["level"]);
+			$this->signlevel=$this->getServer()->getLevelByName($this->config->get("sign")["level"]);
+			$this->sign=new Vector3($this->sign["x"],$this->sign["y"],$this->sign["z"]);
+			$this->pos1=new Vector3($this->pos1["x"]+0.5,$this->pos1["y"]-1,$this->pos1["z"]+0.5);
+			$this->pos2=new Vector3($this->pos2["x"]+0.5,$this->pos2["y"]-1,$this->pos2["z"]+0.5);
+			$this->pos3=new Vector3($this->pos3["x"]+0.5,$this->pos3["y"]-1,$this->pos3["z"]+0.5);
+			$this->pos4=new Vector3($this->pos4["x"]+0.5,$this->pos4["y"]-1,$this->pos4["z"]+0.5);
+			$this->pos5=new Vector3($this->pos5["x"]+0.5,$this->pos5["y"]-1,$this->pos5["z"]+0.5);
+			$this->pos6=new Vector3($this->pos6["x"]+0.5,$this->pos6["y"]-1,$this->pos6["z"]+0.5);
+			$this->pos7=new Vector3($this->pos7["x"]+0.5,$this->pos7["y"]-1,$this->pos7["z"]+0.5);
+			$this->pos8=new Vector3($this->pos8["x"]+0.5,$this->pos8["y"]-1,$this->pos8["z"]+0.5);
+			$this->lastpos=new Vector3($this->lastpos["x"]+0.5,$this->lastpos["y"]+1,$this->lastpos["z"]+0.5);
+		}
+		if(!$this->config->exists("endTime"))
+		{
+			$this->config->set("endTime",180);
+		}
+		if(!$this->config->exists("gameTime"))
+		{
+			$this->config->set("gameTime",300);
+		}
+		if(!$this->config->exists("waitTime"))
+		{
+			$this->config->set("waitTime",180);
+		}
+		if(!$this->config->exists("godTime"))
+		{
+			$this->config->set("godTime",15);
+		}
+		$this->endTime=(int)$this->config->get("endTime");
+		$this->gameTime=(int)$this->config->get("gameTime");
+		$this->waitTime=(int)$this->config->get("waitTime");
+		$this->godTime=(int)$this->config->get("godTime");
+		$this->gameStatus=0;
+		$this->lastTime=0;
+		$this->players=array();
+		$this->SetStatus=array();
+		$this->all=0;
+		$this->config->save();
+		$this->getServer()->getLogger()->info(TextFormat::GREEN."[Finecraft_SG] Ð—Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ !");
+	}
+	
+	public function onCommand(CommandSender $sender, Command $command, $label, array $args)
+	{
+		if($command->getName()=="lobby")
+		{
+			if($this->gameStatus>=2)
+			{
+				$sender->sendMessage("[SG] Ð˜Ð³Ñ€Ð° ÑƒÐ¶Ðµ Ð½Ð°Ñ‡Ð°Ð»Ð°ÑÑŒ Ð²Ñ‹ Ð½Ðµ Ð¼Ð¾Ð¶ÐµÑ‚Ðµ Ð²ÐµÑ€Ð½ÑƒÑ‚ÑŒÑÑ Ð² Ð»Ð¾Ð±Ð±Ð¸");
+				return;
+			}
+			if(isset($this->players[$sender->getName()]))
+			{	
+				unset($this->players[$sender->getName()]);
+				$sender->setLevel($this->signlevel);
+				$sender->teleport($this->signlevel->getSpawnLocation());
+				$sender->sendMessage("[SG] Ð’Ð¾Ð·Ð²Ñ€Ð°Ñ‰ÐµÐ½Ð¸Ðµ Ð² Ð›Ð¾Ð±Ð±Ð¸...");
+				$this->sendToAll("[SG] ".$sender->getName()." Ð¿Ð¾ÐºÐ¸Ð½ÑƒÐ» Ð°Ñ€ÐµÐ½Ñƒ.");
+				$this->changeStatusSign();
+				if($this->gameStatus==1 && count($this->players)<2)
+				{
+					$this->gameStatus=0;
+					$this->lastTime=0;
+					$this->sendToAll("[SG] ÐÐ° Ð°Ñ€ÐµÐ½Ðµ Ð¼ÐµÐ½ÑŒÑˆÐµ 2-ÑƒÑ… Ð¸Ð³Ñ€Ð¾ÐºÐ¾Ð², Ð¾Ñ‚ÑÑ‡ÐµÑ‚ Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½");
+					/*foreach($this->players as $pl)
+					{
+						$p=$this->getServer()->getPlayer($pl["id"]);
+						$p->setLevel($this->signlevel);
+						$p->teleport($this->signlevel->getSpawnLocation());
+						unset($p,$pl);
+					}*/
+				}
+			}
+			else
+			{
+				$sender->sendMessage("[SG] Ð¢Ñ‹ Ð½Ðµ Ð² Ð¸Ð³Ñ€Ðµ !");
+			}
+			return true;
+		}
+		if(!isset($args[0])){unset($sender,$cmd,$label,$args);return false;};
+		switch ($args[0])
+		{
+		case "set":
+			if($this->config->exists("lastpos"))
+			{
+				$sender->sendMessage("[SG] Ð£Ð¶Ðµ Ð²ÑÐµ ÑƒÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð¾, ÑƒÐ´Ð°Ð»Ð¸ ÐºÐ¾Ð½Ñ„Ð¸Ð³");
+			}
+			else
+			{
+				$name=$sender->getName();
+				$this->SetStatus[$name]=0;
+				$sender->sendMessage("[SG] Ð¢Ñ‹ÐºÐ½Ð¸ Ñ‚Ð°Ð±Ð»Ñƒ");
+			}
+			break;
+		case "remove":
+			$this->config->remove("sign");
+			$this->config->remove("pos1");
+			$this->config->remove("pos2");
+			$this->config->remove("pos3");
+			$this->config->remove("pos4");
+			$this->config->remove("pos5");
+			$this->config->remove("pos6");
+			$this->config->remove("pos7");
+			$this->config->remove("pos8");
+			$this->config->remove("lastpos");
+			$this->config->save();
+			unset($this->sign,$this->pos1,$this->pos2,$this->pos3,$this->pos4,$this->pos5,$this->pos6,$this->pos7,$this->pos8,$this->lastpos);
+			$sender->sendMessage("[SG] Ð’ÑÐµ ÑƒÐ´Ð°Ð»ÐµÐ½Ð¾");
+			break;
+		case "start":
+			$this->sendToAll("[SG] Ð˜Ð³Ñ€Ð° Ð½Ð°Ñ‡Ð¸Ð½Ð°ÐµÑ‚ÑÑ Ñ€Ð°Ð½ÑŒÑˆÐµ...");
+			$this->gameStatus=1;
+			$this->lastTime=5;
+			break;
+		case "reload":
+			unset($this->config);
+			@mkdir($this->getDataFolder(), 0777, true);
+			$this->config=new Config($this->getDataFolder() . "config.yml", Config::YAML, array());
+			if($this->config->exists("lastpos"))
+			{
+				$this->sign=$this->config->get("sign");
+				$this->pos1=$this->config->get("pos1");
+				$this->pos2=$this->config->get("pos2");
+				$this->pos3=$this->config->get("pos3");
+				$this->pos4=$this->config->get("pos4");
+				$this->pos5=$this->config->get("pos5");
+				$this->pos6=$this->config->get("pos6");
+				$this->pos7=$this->config->get("pos7");
+				$this->pos8=$this->config->get("pos8");
+				$this->lastpos=$this->config->get("lastpos");
+				$this->level=$this->getServer()->getLevelByName($this->config->get("pos1")["level"]);
+				$this->signlevel=$this->getServer()->getLevelByName($this->config->get("sign")["level"]);
+				$this->sign=new Vector3($this->sign["x"],$this->sign["y"],$this->sign["z"]);
+				$this->pos1=new Vector3($this->pos1["x"]+0.5,$this->pos1["y"],$this->pos1["z"]+0.5);
+				$this->pos2=new Vector3($this->pos2["x"]+0.5,$this->pos2["y"],$this->pos2["z"]+0.5);
+				$this->pos3=new Vector3($this->pos3["x"]+0.5,$this->pos3["y"],$this->pos3["z"]+0.5);
+				$this->pos4=new Vector3($this->pos4["x"]+0.5,$this->pos4["y"],$this->pos4["z"]+0.5);
+				$this->pos5=new Vector3($this->pos5["x"]+0.5,$this->pos5["y"],$this->pos5["z"]+0.5);
+				$this->pos6=new Vector3($this->pos6["x"]+0.5,$this->pos6["y"],$this->pos6["z"]+0.5);
+				$this->pos7=new Vector3($this->pos7["x"]+0.5,$this->pos7["y"],$this->pos7["z"]+0.5);
+				$this->pos8=new Vector3($this->pos8["x"]+0.5,$this->pos8["y"],$this->pos8["z"]+0.5);
+
+				$this->lastpos=new Vector3($this->lastpos["x"]+0.5,$this->lastpos["y"],$this->lastpos["z"]+0.5);
+			}
+			if(!$this->config->exists("endTime"))
+			{
+				$this->config->set("endTime",600);
+			}
+			if(!$this->config->exists("gameTime"))
+			{
+				$this->config->set("gameTime",300);
+			}
+			if(!$this->config->exists("waitTime"))
+			{
+				$this->config->set("waitTime",180);
+			}
+			if(!$this->config->exists("godTime"))
+			{
+				$this->config->set("godTime",15);
+			}
+			$this->endTime=(int)$this->config->get("endTime");
+			$this->gameTime=(int)$this->config->get("gameTime");
+			$this->waitTime=(int)$this->config->get("waitTime");
+			$this->godTime=(int)$this->config->get("godTime");
+			$this->gameStatus=0;
+			$this->lastTime=0;
+			$this->players=array();
+			$this->SetStatus=array();
+			$this->all=0;
+			$this->config->save();
+			$sender->sendMessage("[SG] Ð’ÑÐµ ÑƒÐ´Ð°Ð»ÐµÐ½Ð¾");
+			break;
+		default:
+			return false;
+			break;
+		}
+		return true;
+	}
+	
+	public function onPlayerRespawn(PlayerRespawnEvent $event){
+        $player = $event->getPlayer();
+        $p = $event->getPlayer();
+        if($this->config->exists("lastpos"))
+        {
+			if($player->getLevel()->getFolderName()==$this->level->getFolderName())
+			{
+				$v3=$this->signlevel->getSpawnLocation();
+				$event->setRespawnPosition(new Position($v3->x,$v3->y,$v3->z,$this->signlevel));
+			    $p->getInventory()->clearAll();
+			}
+		}
+		unset($event,$player);
+    }
+	
+	public function onPlace(BlockPlaceEvent $event)
+	{
+		if(!isset($this->sign))
+		{
+			return;
+		}
+		$block=$event->getBlock();
+		if($this->PlayerIsInGame($event->getPlayer()->getName()) || $block->getLevel()==$this->level)
+		{
+			if(!$event->getPlayer()->isOp())
+			{
+				$event->setCancelled();
+			}
+		}
+		unset($block,$event);
+	}
+	
+	public function onMove(PlayerMoveEvent $event)
+	{
+		if(!isset($this->sign))
+		{
+			return;
+		}
+		if($this->PlayerIsInGame($event->getPlayer()->getName()) && $this->gameStatus<=1)
+		{
+			if(!$event->getPlayer()->isOp())
+			{
+				$event->setCancelled();
+			}
+		}
+		unset($event);
+	}
+	public function onBreak(BlockBreakEvent $event)
+	{
+		if(!isset($this->sign))
+		{
+			return;
+		}
+		$sign=$this->config->get("sign");
+		$block=$event->getBlock();
+		if($this->PlayerIsInGame($event->getPlayer()->getName()) || ($block->getX()==$sign["x"] && $block->getY()==$sign["y"] && $block->getZ()==$sign["z"] && $block->getLevel()->getFolderName()==$sign["level"]) || $block->getLevel()==$this->level)
+		{
+			if(!$event->getPlayer()->isOp())
+			{
+				$event->setCancelled();
+			}
+		}
+		unset($sign,$block,$event);
+	}
+	
+	public function onPlayerCommand(PlayerCommandPreprocessEvent $event)
+	{
+		if(!$this->PlayerIsInGame($event->getPlayer()->getName()) || $event->getPlayer()->isOp() || substr($event->getMessage(),0,1)!="/")
+		
